@@ -4,6 +4,7 @@
 
 import EtroObject from './object'
 import { Movie } from './movie'
+import { Transform } from './effect/transform'
 
 /**
  * Gets the first matching property descriptor in the prototype chain, or
@@ -132,12 +133,19 @@ export class KeyFrame<T> {
     // I think reduce are slow to do per-frame (or more)?
     for (let i = 0; i < this.value.length; i++) {
       const startTime = this.value[i][0] as number
-      const startValue = this.value[i][1] as T
+      var startValue = this.value[i][1] as T
+      if (startValue.hasOwnProperty('data')) {
+        startValue = startValue['data'] as T
+      }
+
       type interpolateType = <U = number | object>(startValue: U, endValue: U, percentProgress: number, interpolationKeys: string[]) => U // eslint-disable-line @typescript-eslint/ban-types
       const interpolate = this.value[i].length === 3 ? this.value[i][2] as interpolateType : linearInterp
       if (i + 1 < this.value.length) {
         const endTime = this.value[i + 1][0] as number
-        const endValue = this.value[i + 1][1] as T
+        var endValue = this.value[i + 1][1] as T
+        if (endValue.hasOwnProperty('data')) {
+          endValue = endValue['data'] as T
+        }
         if (startTime <= time && time < endTime) {
           // No need for endValue if it is flat interpolation
           // TODO: support custom interpolation for 'other' types?
