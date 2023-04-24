@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Effects in Etro</title>
+  <script src="../../../dist/etro-iife.js"></script>
+</head>
+
+<body>
+  <script>
+    if (navigator.mediaDevices) {
+  console.log("getUserMedia supported.");
+
+  const constraints = { audio: true, video: true };
+  const chunks = [];
+
+  navigator.mediaDevices
+    .getUserMedia(constraints)
+    .then((stream) => {
+      const options = {
+        audioBitsPerSecond: 128000,
+        videoBitsPerSecond: 2500000,
+        mimeType: "video/mp4",
+      };
+      const mediaRecorder = new MediaRecorder(stream, options);
+      m = mediaRecorder;
+
+      m.mimeType; // would return 'video/mp4'
+      // …
+    })
+    .catch((error) => {
+      console.error(error.message);
+    });
+}
+  </script>
+  <script>
+    let movie
+    window.addEventListener('load', () => {
+      // const canvas = document.getElementById('output')
+
+      const canvas = document.createElement('canvas')
+      document.body.appendChild(canvas)
+
+
+
+      initMovie(canvas)
+    })
+
+    function getCursorPosition(canvas, event) {
+      const rect = canvas.getBoundingClientRect()
+      const translateX = event.clientX
+      const translateY = event.clientX
+      const x = event.clientX - rect.left
+      const y = event.clientY - rect.top
+      console.log("x: " + x + " y: " + y)
+      console.log("tx: " + translateX + " ty: " + translateY)
+    }
+
+
+    const initMovie = canvas => {
+      movie = new etro.Movie({ canvas, repeat: true })
+
+      canvas.addEventListener('click', function (e) {
+        getCursorPosition(canvas, e)
+      })
+      const controls = {
+        playPause: document.getElementById('pause-play'),
+        progressBar: document.getElementById('progress'),
+        download: document.getElementById('download')
+      }
+
+      controls.download.onclick = e => {
+        movie.stop()
+        // movie.record({ frameRate: 25 })
+        movie.record({ framerate: 60, type: 'video/mp4; codecs="avc1.4d002a"' })
+          .then(blob => {
+            // const video = document.querySelector('#output video')
+            // video.src = URL.createObjectURL(blob)
+
+            const data = URL.createObjectURL(blob)
+
+            const link = document.createElement('a');
+            link.href = data;
+            link.download = name;
+
+            // this is necessary as link.click() does not work on the latest firefox
+            link.dispatchEvent(
+              new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+              })
+            );
+
+            setTimeout(() => {
+              // For Firefox it is necessary to delay revoking the ObjectURL
+              window.URL.revokeObjectURL(data);
+              link.remove();
+            }, 100);
+
+          })
+          .catch(error => {
+            throw error
+          })
+      }
+
+      controls.playPause.onclick = event => {
+        if (controls.playPause.className === 'play') {
+          movie.pause()
+          movie.play()
+          // movie.refresh()
+          // setInterval(function () {
+          //   movie.pause()
+          //   movie.play()
+          // },
+          //   100);
+
+          controls.playPause.className = 'pause'
+        } else {
+          movie.pause()
+          controls.playPause.className = 'play'
+        }
+      }
+
+
+      const x = 397
+      const y = 245.5
+
+      const image = document.querySelector('#image')
+      const frame = document.querySelector('#frame')
+      canvas.width = image.width
+      canvas.height = image.height
+
+      const translateX = image.width / x
+      const translateY = image.height / y
+
+      console.log(image.width, image.height)
+
+      // var videoSource = new etro.layer.Video({ startTime: 0, duration: 10, source: video })
+      // var videoSource = new etro.layer.Video({ startTime: 0, source: video })
+      var layer1 = new etro.layer.Image({ startTime: 0, duration: 10, source: image })
+      layer1.addEffect(new etro.effect.Brightness({
+        // brightness: +100
+        brightness: new etro.KeyFrame(
+          [0, -75],  // brightness == -75 at 0 seconds
+          [2, 0],  // +75 at 2 seconds
+          [4, +75]  // +75 at 2 seconds
+        )
+      }))
+      layer1.addEffect(new etro.effect.Transform({
+        matrix:
+        {
+          data:
+            new etro.KeyFrame(
+              [0, new etro.effect.Transform.Matrix().rotate(0)],
+              [2, new etro.effect.Transform.Matrix().scale(2, 2)
+                .multiply(new etro.effect.Transform.Matrix().translate(translateX, translateY))
+              ],
+            )
+        }
+      }))
+      // layer1.addEffect(
+      //       new etro.effect.EllipticalMask({
+      //         x: image.width / 2,
+      //         y: image.height / 2,
+      //         radiusX: image.width / 2,
+      //         radiusY: image.height / 2
+      //       })
+      //     )
+
+
+      movie.addLayer(layer1)
+
+      var layer2 = new etro.layer.Image({
+        startTime: 0,
+        duration: 10,
+        source: frame,
+        // sourceX: 0,
+        // sourceY: 0,
+        // sourceWidth: 3000,
+        // sourceHeight: 3000,
+        x: x,
+        y: y,
+        // width: 400,
+        // height: 400
+      }).addEffect(
+        new etro.effect.Transform({
+          matrix: new etro.effect.Transform.Matrix().scale(0.4, 0.4) // 30d
+        })
+      )
+
+
+
+      movie.addLayer(layer2)
+
+
+
+      const layer3 = new etro.layer.Text({
+        startTime: 0,
+        duration: 10,
+        text: new etro.KeyFrame(
+          [0, 'Hello'], 
+          [1, 'Hello World']
+        ),
+        // text: 'Hello world',
+        font: '24px monospace',
+        color: 'blue'
+      })
+
+
+      movie.addLayer(layer3)
+
+
+      movie.play()
+
+
+      // movie.refresh()
+    }
+  </script>
+  <img id="image" src="../assets/lake.jpg" style="display: none;" />
+  <img id="frame" src="../assets/Blue_circle_frame.png" style="display: none;" />
+
+  <!-- <video src="../assets/upb_1.mp4" style="display: none;"></video> -->
+  <!-- <img src="../assets/lake.jpg" /> -->
+  <!-- <canvas id="output"></canvas><br> -->
+
+  <button id="pause-play" class="play">play</button>
+  <button id="download" class="download">download</button>
+  <!-- <input id="progress" type="range" value="0" /> -->
+
+  <!-- <div id="output">
+    <video controls></video><br>
+  </div> -->
+
+</body>
+
+</html>
